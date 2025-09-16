@@ -13,6 +13,41 @@ const removeFriendBtn = document.getElementById('removeFriendBtn');
 const video = document.getElementById('videoPlayer');
 const playPauseBtn = document.getElementById('playPauseBtn');
 const syncBtn = document.getElementById('syncBtn');
+const videoKeyInput = document.getElementById('videoKeyInput');
+const loadVideoBtn = document.getElementById('loadVideoBtn');
+const authModal = document.getElementById('authModal');
+const authTitle = document.getElementById('authTitle');
+const authName = document.getElementById('authName');
+const authEmail = document.getElementById('authEmail');
+const authPassword = document.getElementById('authPassword');
+const authToggleBtn = document.getElementById('authToggleBtn');
+const authSubmitBtn = document.getElementById('authSubmitBtn');
+
+let authMode = 'login'; // or 'register'
+function showAuth(){ authModal.hidden = false; }
+function hideAuth(){ authModal.hidden = true; }
+function updateAuthUI(){ authTitle.textContent = authMode === 'login' ? 'Sign In' : 'Register'; authToggleBtn.textContent = authMode === 'login' ? 'Switch to Register' : 'Switch to Login'; }
+authToggleBtn.addEventListener('click', ()=>{ authMode = authMode === 'login' ? 'register' : 'login'; updateAuthUI(); });
+authSubmitBtn.addEventListener('click', async ()=>{
+  const name = authName.value.trim();
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
+  try{
+    const url = authMode === 'login' ? '/login' : '/register';
+    const resp = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name,email,password})});
+    const body = await resp.json();
+    if(resp.ok){
+      localStorage.setItem('authToken', body.token);
+      addChatMessage('Signed in as ' + (body.name || email), 'me');
+      hideAuth();
+    } else {
+      addChatMessage('Auth error: ' + (body.error || resp.statusText), 'them');
+    }
+  }catch(e){ addChatMessage('Auth request failed: '+String(e), 'them'); }
+});
+
+// auto-show auth if not logged in
+if(!localStorage.getItem('authToken')) showAuth();
 
 let clientId = null;
 let clientName = null;
@@ -193,6 +228,25 @@ syncBtn.addEventListener('click', ()=>{
   const t = Math.floor(video.currentTime);
   if(ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({type:'control', action:'sync', time: t}));
   addChatMessage(`Synced to ${t}s`, 'me');
+});
+
+loadVideoBtn.addEventListener('click', async ()=>{
+  const key = (videoKeyInput.value || '').trim();
+  if(!key) return addChatMessage('Enter a video key/path to load', 'me');
+  try{
+    const headers = {};
+    const token = localStorage.getItem('authToken');
+    if(token) headers['Authorization'] = 'Bearer ' + token;
+    const resp = await fetch(`/video-url?key=${encodeURIComponent(key)}`, {headers});
+    const body = await resp.json();
+    if(body && body.url){
+      video.src = body.url;
+      video.load();
+      addChatMessage(`Loaded video from ${body.source}`, 'me');
+    } else {
+      addChatMessage('Failed to get video URL: ' + (body.error || 'unknown'), 'me');
+    }
+  }catch(e){ addChatMessage('Error fetching video URL: '+String(e), 'me'); }
 });
 
 // webOS integration: handle Back key

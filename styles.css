@@ -49,3 +49,9 @@ html,body,#app{height:100%;margin:0;padding:0;font-family:Inter, system-ui, -app
   .main-grid{flex-direction:column}
   .side-panel{width:100%}
 }
+
+/* auth modal */
+.auth-modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center}
+.auth-panel{background:var(--panel);padding:20px;border-radius:10px;min-width:360px;display:flex;flex-direction:column;gap:8px}
+.auth-panel input{padding:10px;border-radius:6px;border:none;background:#081017;color:#e6eef6}
+.auth-actions{display:flex;justify-content:space-between;gap:8px}

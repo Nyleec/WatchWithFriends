@@ -38,6 +38,34 @@ Packaging notes for LG webOS:
  - To package as a webOS app you'll need an `appinfo.json` manifest and to follow LG's packaging/signing steps. See LG developer docs for details.
  - When running on a real TV the `webOS.service.request` endpoints (e.g. `luna://com.webos.media`) will be available; `webos.js` safely falls back for desktop testing.
 
+Loading videos from S3 / CDN
+
+- The server exposes a simple endpoint `/video-url?key=<object-key>` that will return either a CDN URL (if `CDN_BASE_URL` is set) or a presigned S3 URL (if `S3_BUCKET` is configured).
+- Environment variables (see `.env.example`):
+	- `CDN_BASE_URL` (optional): base URL of your CDN distribution (CloudFront). If set, server returns `CDN_BASE_URL/<key>` directly.
+	- `S3_BUCKET` and AWS credentials (optional): if CDN is not provided, the server will generate a presigned S3 URL.
+
+Usage in the UI:
+1. Enter the S3 object key or path (e.g. `videos/movie.mp4`) in the `Load From S3/CDN` input and click the button.
+2. Client requests `/video-url?key=...` and sets the returned URL as the video's `src`.
+
+Security note: For production don't expose S3 presign endpoints without auth — generate presigned URLs from a trusted backend and include short expiry times.
+
+Authentication and uploads
+
+- Endpoints added:
+	- `POST /register` {name,email,password} — creates a user and returns a JWT token.
+	- `POST /login` {email,password} — returns a JWT token.
+	- `POST /presign-upload` {key,contentType} — returns a presigned PUT URL for direct browser upload (requires Authorization: Bearer <token>).
+
+- Client UI: a login/register modal is shown on first load. The JWT is stored in `localStorage` and sent when requesting upload presigned URLs.
+
+Upload flow example (client-side):
+1. User authenticates and obtains a JWT.
+2. Client requests `POST /presign-upload` with `{key: 'videos/new.mp4'}` and Authorization header.
+3. Server returns a presigned PUT URL. Client performs an HTTP PUT of the file directly to S3.
+4. After upload, the client can call `/video-url?key=videos/new.mp4` to get the playable URL.
+
 Playback sync and packaging helpers
 
 - Playback sync: the server now aggregates periodic `timeUpdate` messages from clients and broadcasts a `time-correction` (average) every 5s. Clients send their current playback time every 2s and apply corrections smoothly (playbackRate nudge for small drift, seek for large drift).
