@@ -1,0 +1,11 @@
+{
+  "id": "com.example.watchwithfriends",
+  "version": "1.0.0",
+  "title": "Watch With Friends",
+  "type": "web",
+  "main": "index.html",
+  "icon": "icon.png",
+  "requiredPermissions": [
+    "webos.service"
+  ]
+}
