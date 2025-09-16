@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Watch With Friends - LG App Mock</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="app">
+    <header class="app-header">
+      <h1>Watch With Friends</h1>
+      <div class="controls">
+        <button id="playPauseBtn" class="control-btn">Play</button>
+        <button id="syncBtn" class="control-btn">Sync</button>
+      </div>
+    </header>
+
+    <main class="main-grid">
+      <section class="video-panel">
+        <video id="videoPlayer" controls crossorigin="anonymous">
+          <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+      </section>
+
+      <aside class="side-panel">
+        <div class="friends-box">
+          <h2>Friends Watching</h2>
+          <ul id="friendsList" class="friends-list"></ul>
+          <div class="friend-controls">
+            <button id="addFriendBtn" class="small-btn">Add Friend</button>
+            <button id="removeFriendBtn" class="small-btn">Remove Friend</button>
+          </div>
+        </div>
+
+        <div class="chat-box">
+          <h2>Chat</h2>
+          <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
+          <form id="chatForm" class="chat-form">
+            <input id="chatInput" type="text" placeholder="Type a message" autocomplete="off" />
+            <button type="submit" class="send-btn">Send</button>
+          </form>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="app-footer">
+      <p>LG App Mock - Remote-friendly UI</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

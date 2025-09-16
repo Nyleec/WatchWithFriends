@@ -1,0 +1,13 @@
+{
+  "name": "watch-with-friends",
+  "version": "0.1.0",
+  "description": "LG mock app with real-time chat and presence (demo)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.13.0",
+    "uuid": "^9.0.0"
+  }
+}

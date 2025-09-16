@@ -1,0 +1,44 @@
+/* TV-friendly layout with large touch targets */
+:root{
+  --bg:#0b0f14;
+  --panel:#0f1720;
+  --muted:#9aa6b2;
+  --accent:#1db954;
+  --card:#111827;
+}
+
+*{box-sizing:border-box}
+html,body,#app{height:100%;margin:0;padding:0;font-family:Inter, system-ui, -apple-system, sans-serif;background:var(--bg);color:#e6eef6}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;background:linear-gradient(90deg, rgba(255,255,255,0.02), transparent);}
+.app-header h1{font-size:28px;margin:0}
+.control-btn{background:var(--accent);color:#04261a;border:none;padding:12px 18px;border-radius:6px;font-size:18px;cursor:pointer}
+.control-btn:active{transform:translateY(1px)}
+.main-grid{display:flex;gap:20px;padding:20px 32px;height:calc(100% - 140px)}
+.video-panel{flex:1;display:flex;align-items:center;justify-content:center}
+.video-panel video{width:100%;height:100%;max-height:100%;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.6)}
+.side-panel{width:420px;display:flex;flex-direction:column;gap:20px}
+.friends-box,.chat-box{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:14px;border-radius:8px;border:1px solid rgba(255,255,255,0.03)}
+.friends-box h2,.chat-box h2{margin:0 0 8px 0;font-size:20px}
+.friends-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+.friend-item{display:flex;align-items:center;gap:12px;padding:8px;border-radius:6px;background:rgba(255,255,255,0.01)}
+.friend-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(180deg,#3a7bd5,#00d2ff);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff}
+.friend-name{font-size:18px}
+.friend-status{margin-left:auto;font-size:14px;color:var(--muted)}
+.friend-controls{display:flex;gap:8px;margin-top:12px}
+.small-btn{padding:8px 10px;border-radius:6px;border:none;background:#223047;color:#cfe7db;cursor:pointer}
+.chat-messages{height:340px;overflow:auto;padding:10px;border-radius:6px;background:rgba(0,0,0,0.15);display:flex;flex-direction:column;gap:8px}
+.chat-msg{padding:10px;border-radius:8px;max-width:85%;font-size:16px}
+.chat-msg.me{margin-left:auto;background:linear-gradient(90deg,var(--accent),#1aa65a);color:#02110a}
+.chat-msg.them{margin-right:auto;background:rgba(255,255,255,0.03);color:#e6eef6}
+.chat-form{display:flex;gap:8px;margin-top:12px}
+.chat-form input{flex:1;padding:12px;border-radius:8px;border:none;background:#0b1116;color:#e6eef6;font-size:16px}
+.send-btn{padding:12px 16px;border-radius:8px;border:none;background:#2b6e48;color:#e6eef6}
+.app-footer{padding:12px 32px;font-size:13px;color:var(--muted);}
+
+/* Make things larger for TV remote focus */
+:focus{outline:3px solid rgba(29,185,84,0.25);outline-offset:3px}
+
+@media (max-width:900px){
+  .main-grid{flex-direction:column}
+  .side-panel{width:100%}
+}
