@@ -66,6 +66,21 @@ Upload flow example (client-side):
 3. Server returns a presigned PUT URL. Client performs an HTTP PUT of the file directly to S3.
 4. After upload, the client can call `/video-url?key=videos/new.mp4` to get the playable URL.
 
+Room and multi-tenant support
+
+- The WebSocket layer now supports room-scoped sessions via `?room=<roomId>` on the WebSocket URL.
+- Clients join a shared room and receive presence, chat, host, and sync events only for that room.
+- New endpoints:
+	- `POST /rooms` — create or reserve a room ID, returns `{roomId}`.
+	- `GET /rooms/:roomId` — inspect room state, participants, and current host.
+- To use custom rooms, open the client with a query string like `index.html?room=customer-123`.
+
+White-label usage
+
+- Keep the backend service and replace the UI shell for your brand.
+- Use the existing real-time engine and room-scoped session handling as a reusable watch-with-friends framework.
+- Implement your company-specific front-end branding, authentication, and page flow on top of `/register`, `/login`, `/video-url`, `/presign-upload`, and the room-aware WebSocket connection.
+
 Playback sync and packaging helpers
 
 - Playback sync: the server now aggregates periodic `timeUpdate` messages from clients and broadcasts a `time-correction` (average) every 5s. Clients send their current playback time every 2s and apply corrections smoothly (playbackRate nudge for small drift, seek for large drift).

@@ -9,7 +9,10 @@
 <body>
   <div id="app" class="app">
     <header class="app-header">
-      <h1>Watch With Friends</h1>
+      <div class="header-top">
+        <h1>Watch With Friends</h1>
+        <div id="roomLabel" class="room-label">Room: main</div>
+      </div>
       <div class="controls">
         <button id="playPauseBtn" class="control-btn">Play</button>
         <button id="syncBtn" class="control-btn">Sync</button>
@@ -81,6 +84,6 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
