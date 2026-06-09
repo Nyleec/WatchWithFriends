@@ -1,14 +1,27 @@
 require('dotenv').config();
+const fs = require('fs');
 const http = require('http');
 const WebSocket = require('ws');
 const { v4: uuidv4 } = require('uuid');
 const AWS = require('aws-sdk');
-const { MongoClient, ObjectId } = require('mongodb');
+const db = require('./db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const logFilename = (() => {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const date = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+  return `${date}_${time}.log`;
+})();
+
+const logStream = fs.createWriteStream(logFilename, { flags: 'a' });
+console.log('Writing logs to', logFilename);
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
+  log('HTTP request', req.method, url.pathname);
 
   // Simple user registration endpoint: POST /register {name, email, password}
   if(req.method === 'POST' && url.pathname === '/register'){
@@ -16,7 +29,10 @@ const server = http.createServer(async (req, res) => {
       let body = '';
       for await (const chunk of req) body += chunk;
       const {name, email, password} = JSON.parse(body || '{}');
+  log('Register request', {email, name});
   if(!email || !password) return resEnd(res, 400, {error: 'email and password required'});
+  const usersCollection = db.getUsersCollection();
+  if(!usersCollection) return resEnd(res, 503, {error: 'database unavailable'});
   const existing = await usersCollection.findOne({email});
   if(existing) return resEnd(res, 409, {error: 'email already exists'});
       const hash = await bcrypt.hash(password, 10);
@@ -34,7 +50,10 @@ const server = http.createServer(async (req, res) => {
       let body = '';
       for await (const chunk of req) body += chunk;
       const {email, password} = JSON.parse(body || '{}');
+  log('Login request', {email});
   if(!email || !password) return resEnd(res, 400, {error: 'email and password required'});
+      const usersCollection = db.getUsersCollection();
+      if(!usersCollection) return resEnd(res, 503, {error: 'database unavailable'});
       const user = await usersCollection.findOne({email});
   if(!user) return resEnd(res, 401, {error:'invalid credentials'});
       const ok = await bcrypt.compare(password, user.passwordHash);
@@ -51,6 +70,7 @@ const server = http.createServer(async (req, res) => {
   if(!auth) return resEnd(res, 401, {error:'unauthorized'});
       const body = await streamToString(req);
       const {key, contentType} = JSON.parse(body || '{}');
+  log('Presign upload request', {key});
   if(!key) return resEnd(res, 400, {error:'missing key'});
   const s3Bucket = process.env.S3_BUCKET;
   if(!s3Bucket) return resEnd(res, 500, {error:'no S3_BUCKET configured'});
@@ -65,6 +85,7 @@ const server = http.createServer(async (req, res) => {
   // Return video URL (CDN or presigned S3). Require auth in production if JWT_SECRET set
   if(url.pathname === '/video-url'){
     const key = url.searchParams.get('key');
+  log('Video URL request', {key});
   if(!key){ res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'missing key'})); return; }
     const cdnBase = process.env.CDN_BASE_URL; // e.g. https://dxxxxx.cloudfront.net
     if(cdnBase){
@@ -110,29 +131,22 @@ function streamToString(stream){
 function resEnd(res, status, obj){
   const code = status;
   const body = JSON.stringify(obj || {});
+  log('HTTP response', code, obj);
   res.writeHead(code, {'Content-Type':'application/json'});
   res.end(body);
 }
 
-// MongoDB collection handle for users
-let usersCollection = null;
+function log(...args){
+  const timestamp = new Date().toISOString();
+  const line = [timestamp, ...args].map(arg => typeof arg === 'string' ? arg : JSON.stringify(arg)).join(' ');
+  console.log(line);
+  logStream.write(line + '\n');
+}
 
 // Start server and initialize MongoDB if configured
 const port = process.env.PORT || 3000;
 (async function init(){
-  if(process.env.MONGO_URI){
-    try{
-      const client = new MongoClient(process.env.MONGO_URI);
-      await client.connect();
-      const dbName = process.env.MONGO_DB || 'watchwithfriends';
-      usersCollection = client.db(dbName).collection('users');
-      console.log('Connected to MongoDB', dbName);
-    }catch(e){
-      console.warn('Failed to connect to MongoDB, auth endpoints will fail:', e.message);
-    }
-  } else {
-    console.log('No MONGO_URI set; registration/login disabled');
-  }
+  await db.initDb();
 
   server.listen(port, ()=> console.log('WebSocket server listening on', port));
 })();
@@ -154,6 +168,7 @@ wss.on('connection', (ws) => {
   const id = uuidv4();
   const name = 'Guest-' + id.slice(0,4);
   clients.set(ws, {id, name});
+  log('WebSocket connected', {id, name, clientCount: clients.size});
 
   // send welcome with current presence
   const presence = Array.from(clients.values()).map(c => ({id: c.id, name: c.name}));
@@ -166,10 +181,12 @@ wss.on('connection', (ws) => {
     try{ msg = JSON.parse(raw); }catch(e){return}
     switch(msg.type){
       case 'chat':
+        log('WebSocket message', {type: 'chat', id: clients.get(ws).id, text: msg.text});
         // broadcast chat
         broadcast({type:'chat', id: clients.get(ws).id, name: clients.get(ws).name, text: msg.text});
         break;
       case 'timeUpdate':
+        log('WebSocket message', {type: 'timeUpdate', id: clients.get(ws).id, time: msg.time});
         // clients periodically send their current playback time
         try{
           const t = Number(msg.time) || 0;
@@ -177,6 +194,7 @@ wss.on('connection', (ws) => {
         }catch(e){}
         break;
       case 'claim-host':
+        log('WebSocket message', {type: 'claim-host', id: clients.get(ws).id});
         // client requests to become host
         try{
           const id = clients.get(ws).id;
@@ -185,6 +203,7 @@ wss.on('connection', (ws) => {
         }catch(e){}
         break;
       case 'release-host':
+        log('WebSocket message', {type: 'release-host', id: clients.get(ws).id});
         try{
           const id = clients.get(ws).id;
           if(hostId === id){ hostId = null; broadcast({type:'host-changed', id: null}); }
@@ -194,6 +213,7 @@ wss.on('connection', (ws) => {
         // ignore for now
         break;
       case 'control':
+        log('WebSocket message', {type: 'control', id: clients.get(ws).id, action: msg.action, time: msg.time});
         // broadcast media control actions like play/pause/sync
         broadcast({type:'control', id: clients.get(ws).id, action: msg.action, time: msg.time});
         break;
@@ -201,8 +221,9 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', ()=>{
-    const info = clients.get(ws);
+    const info = clients.get(ws) || {id: 'unknown', name: 'unknown'};
     clients.delete(ws);
+    log('WebSocket closed', {id: info.id, name: info.name, clientCount: clients.size});
     broadcast({type:'presence-leave', id: info.id, name: info.name});
   })
 });
